@@ -285,43 +285,6 @@ contract UFT_Governance_Token {
       emit DelegateVotesChanged(delegatee, oldVotes, newVotes);
     }
 
-    function _mint(address account, uint amount) internal {
-        require(account != address(0), "ERC20: mint to the zero address");
-
-        balances[account] = add96(balances[account], uint96(amount), "UFTG::_transferTokens: transfer amount overflows");
-        totalSupply = add256(totalSupply, amount, "UFTG::_transferTokens: totalSupply overflows");
-        emit Transfer(address(0), account, amount);
-    }
-
-    function _burn(address account, uint amount) internal {
-        require(account != address(0), "ERC20: burn to the zero address");
-
-        balances[account] = sub96(balances[account], uint96(amount), "UFTG::_transferTokens: transfer amount exceeds spender balance");
-        totalSupply = sub256(totalSupply, amount, "UFTG::_transferTokens: totalSupply underflows");
-        emit Transfer(account, address(0), amount);
-    }
-
-    function deposit(uint amount) internal {
-        address uft_ = uft;
-
-        uint reserveBalance = IERC20(uft_).balanceOf(address(this));
-        IERC20(uft_).transferFrom(msg.sender, address(this), amount);
-        amount = sub256( IERC20(uft_).balanceOf(address(this)), reserveBalance, "UFTG::_transferTokens: amount underflows");
-        
-        _mint(msg.sender, amount);
-    }
-
-    function withdraw(uint amount) public {
-        IERC20(uft).transfer(msg.sender, amount);
-        _burn(msg.sender, amount);
-        _moveDelegates(delegates[msg.sender], address(0), uint96(amount));
-    }
-
-    function delegateWithDeposit(address delegatee, uint amount) public {
-        deposit(amount);
-        _delegate(msg.sender, delegatee);
-    }
-
     function safe32(uint n, string memory errorMessage) internal pure returns (uint32) {
         require(n < 2**32, errorMessage);
         return uint32(n);
@@ -361,5 +324,36 @@ contract UFT_Governance_Token {
         uint256 chainId;
         assembly { chainId := chainid() }
         return chainId;
+    }
+
+    // extended code for UFT <-> UFTG 
+
+    function unwrap(uint amount) external {
+        address account = msg.sender;
+
+        balances[account] = sub96(balances[account], uint96(amount), "UFTG::unwrap: unwrap amount exceeds spender balance");
+        totalSupply = sub256(totalSupply, amount, "UFTG::unwrap: totalSupply underflows");
+        emit Transfer(account, address(0), amount);
+
+        IERC20(uft).transfer(account, amount);
+
+        _moveDelegates(delegates[account], address(0), uint96(amount));
+    }
+
+    function wrap(address delegatee, uint amount) external {
+        require(delegatee != address(0), "UFTG::_wrap: cannot delegate to zero address");
+
+        address uft_ = uft;
+        address account = msg.sender;
+
+        uint reserveBalance = IERC20(uft_).balanceOf(address(this));
+        IERC20(uft_).transferFrom(account, address(this), amount);
+        amount = sub256( IERC20(uft_).balanceOf(address(this)), reserveBalance, "UFTG::wrap: amount underflows");
+
+        balances[account] = add96(balances[account], uint96(amount), "UFTG::wrap: wrap amount overflows");
+        totalSupply = add256(totalSupply, amount, "UFTG::wrap: totalSupply overflows");
+        emit Transfer(address(0), account, amount);
+
+        _delegate(account, delegatee);
     }
 }
