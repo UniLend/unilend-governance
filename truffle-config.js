@@ -16,7 +16,7 @@ module.exports = {
       provider: function() {
         return new HDWalletProvider(
           MNEMONIC,
-          `https://kovan.infura.io/${API_KEY}`
+          `https://kovan.infura.io/v3/${API_KEY}`
         )
       },
       network_id: 42,
@@ -42,13 +42,14 @@ module.exports = {
         )
       },
       network_id: 1,
-      gas: 7000000
+      gas: 5000000,
+      gasPrice: 20000000000, // 20 gwei
     }
   },
 
   // Set default mocha options here, use special reporters etc.
   mocha: {
-    // timeout: 100000
+    timeout: 1000000000
   },
   plugins: ['truffle-plugin-verify'],
   // Configure your compilers
