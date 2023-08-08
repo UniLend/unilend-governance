@@ -328,6 +328,31 @@ contract UFT_Governance_Token {
 
     // extended code for UFT <-> UFTG 
 
+    function _mintDelegates(address srcRep, address dstRep, uint96 amount) internal {
+        if (amount > 0) {
+            if (srcRep != address(0) && srcRep != dstRep) {
+                uint32 srcRepNum = numCheckpoints[srcRep];
+                uint96 srcRepOld = srcRepNum > 0 ? checkpoints[srcRep][srcRepNum - 1].votes : 0;
+                _writeCheckpoint(srcRep, srcRepNum, srcRepOld, 0);
+            }
+
+            if (dstRep != address(0)) {
+                uint32 dstRepNum = numCheckpoints[dstRep];
+                uint96 dstRepOld = dstRepNum > 0 ? checkpoints[dstRep][dstRepNum - 1].votes : 0;
+                _writeCheckpoint(dstRep, dstRepNum, dstRepOld, amount);
+            }
+        }
+    }
+
+    function _burnDelegates(address srcRep, uint96 amount) internal {
+        if (amount > 0) {
+            uint32 srcRepNum = numCheckpoints[srcRep];
+            uint96 srcRepOld = srcRepNum > 0 ? checkpoints[srcRep][srcRepNum - 1].votes : 0;
+            uint96 srcRepNew = sub96(srcRepOld, amount, "UFTG::_moveVotes: vote amount underflows");
+            _writeCheckpoint(srcRep, srcRepNum, srcRepOld, srcRepNew);
+        }
+    }
+
     function unwrap(uint amount) external {
         address account = msg.sender;
         uint96 amount96 = safe96(amount, "UFTG::wrap: amount exceeds 96 bits");
@@ -338,7 +363,7 @@ contract UFT_Governance_Token {
 
         IERC20(uft).transfer(account, amount);
 
-        _moveDelegates(delegates[account], address(0), amount96);
+        _burnDelegates(delegates[account], amount96);
     }
 
     function wrap(address delegatee, uint amount) external {
@@ -362,6 +387,6 @@ contract UFT_Governance_Token {
             emit DelegateChanged(account, currentDelegate, delegatee);
         }
 
-        _moveDelegates(address(0), delegates[account], amount96);
+        _mintDelegates(currentDelegate, delegatee, balances[account]);
     }
 }
