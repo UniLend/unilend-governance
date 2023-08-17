@@ -24,7 +24,7 @@ module.exports = async function(deployer) {
     // Deploy UFTG token
     await deployer.deploy(UFTG, UFT)
     const UFTG_Contract = await UFTG.deployed()
-    console.log("GovernorBravoDelegate contract deployement done", UFTG_Contract.address)
+    console.log("UFTG contract deployement done", UFTG_Contract.address)
 
 
     // Deploy GovernorBravoDelegate contract
